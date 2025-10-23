@@ -1,0 +1,834 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>เครื่องมือคำนวณจำนวนพนักงาน</title>
+    <!-- Load Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f0f4f8;
+        }
+        .card {
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+            border-radius: 1rem;
+        }
+        input[type="number"] {
+            transition: all 0.2s;
+        }
+        input[type="number"]:focus {
+            border-color: #3b82f6;
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.5);
+        }
+        .staff-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 0.75rem;
+        }
+        .header-bg {
+            background-color: #e0f2fe;
+            color: #0369a1;
+            font-weight: 600;
+        }
+        .summary-total {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: #1d4ed8; /* Blue-700 */
+        }
+    </style>
+</head>
+<body class="p-4 md:p-8 min-h-screen flex items-start justify-center">
+
+    <div class="w-full max-w-4xl bg-white card p-6 md:p-10">
+        <h1 class="text-3xl font-bold text-center text-blue-700 mb-2">
+            เครื่องมือคำนวณจำนวนพนักงานในการผลิต (แยกกะ)
+        </h1>
+        <p class="text-center text-gray-500 mb-8">
+            คำนวณเครื่องจักรที่ต้องใช้ จากนั้นคำนวณพนักงานสำหรับ Shift A และ Shift B (21.5 ชม./วัน)
+        </p>
+        
+        <!-- Explanation Box -->
+        <div class="p-4 bg-yellow-100 border-l-4 border-yellow-500 text-yellow-800 rounded-lg mb-8">
+            <h3 class="font-bold">หลักการคำนวณ FTE ต่อกะ:</h3>
+            <p class="text-sm mt-2">
+                ระบบคำนวณ **Raw FTE** (สำหรับ 21.5 ชม.) จากนั้นแบ่งครึ่ง และ **ปัดขึ้น** สำหรับแต่ละกะ (A และ B) เพื่อให้แน่ใจว่ากำลังคนเพียงพอในทุกช่วงเวลา **การคำนวณจะยึดตามอัตราการผลิตตามจริงที่คุณกรอก**<br>
+                **สำคัญ:** พนักงาน Verify ถูกคำนวณตามจำนวนเครื่องจักรที่จำเป็น (1 เครื่อง = 2 คนรวม 2 กะ) และ **ทุกตำแหน่งมีจำนวนคนรวมเป็นเลขคู่เสมอ** เพื่อให้สามารถจัดแบ่ง 2 กะที่เท่ากันได้
+            </p>
+        </div>
+
+        <!-- Input Section -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8 p-4 bg-gray-50 rounded-lg border">
+            <!-- Inner Production Input -->
+            <div class="space-y-4">
+                <label for="innerProductionOrder" class="block text-sm font-medium text-gray-700 mb-1">
+                    ยอดการผลิต Inner ต่อวัน (Boards/วัน)
+                </label>
+                <input type="number" id="innerProductionOrder" value="0" min="0"
+                       class="mt-1 block w-full px-4 py-2 border border-gray-300 rounded-lg shadow-sm focus:ring-indigo-500 focus:border-indigo-500 text-lg">
+                
+                <h4 class="font-bold text-sm text-indigo-700 pt-2 border-t border-indigo-200">อัตราการผลิต Inner (ตามจริง / ชม.)</h4>
+                <div class="grid grid-cols-2 gap-2">
+                    <div>
+                        <label for="innerVerifyRateActual" class="block text-xs font-medium text-gray-500">Verify (Board/ชม.)</label>
+                        <input type="number" id="innerVerifyRateActual" value="120" min="1"
+                            class="mt-1 block w-full px-3 py-1 border border-gray-300 rounded-lg text-sm">
+                    </div>
+                    <div>
+                        <label for="innerCutoffRateActual" class="block text-xs font-medium text-gray-500">Cutoff Defect (Board/ชม.)</label>
+                        <input type="number" id="innerCutoffRateActual" value="350" min="1"
+                            class="mt-1 block w-full px-3 py-1 border border-gray-300 rounded-lg text-sm">
+                    </div>
+                </div>
+                
+            </div>
+
+            <!-- Outer Production Input -->
+            <div class="space-y-4">
+                <label for="outerProductionOrder" class="block text-sm font-medium text-gray-700 mb-1">
+                    ยอดการผลิต Outer ต่อวัน (Boards/วัน)
+                </label>
+                <input type="number" id="outerProductionOrder" value="0" min="0"
+                       class="mt-1 block w-full px-4 py-2 border border-gray-300 rounded-lg shadow-sm focus:ring-yellow-500 focus:border-yellow-500 text-lg">
+                
+                 <h4 class="font-bold text-sm text-yellow-700 pt-2 border-t border-yellow-200">อัตราการผลิต Outer (ตามจริง / ชม.)</h4>
+                <div class="grid grid-cols-2 gap-2">
+                    <div>
+                        <label for="outerVerifyRateActual" class="block text-xs font-medium text-gray-500">Verify (Board/ชม.)</label>
+                        <input type="number" id="outerVerifyRateActual" value="50" min="1"
+                            class="mt-1 block w-full px-3 py-1 border border-gray-300 rounded-lg text-sm">
+                    </div>
+                    <div>
+                        <label for="outerCutoffRateActual" class="block text-xs font-medium text-gray-500">Cutoff Defect (Board/ชม.)</label>
+                        <input type="number" id="outerCutoffRateActual" value="250" min="1"
+                            class="mt-1 block w-full px-3 py-1 border border-gray-300 rounded-lg text-sm">
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Material Handler Rate Input (Across Both Columns) -->
+            <div class="md:col-span-2 pt-4 mt-4 border-t border-gray-300">
+                <h4 class="font-bold text-sm text-pink-700">อัตราการทำงานของพนักงานรับส่งงาน (Material Handler)</h4>
+                <div class="grid grid-cols-2 gap-2 mt-2">
+                    <div>
+                         <label for="materialHandlerRateActual" class="block text-xs font-medium text-gray-500">
+                            รับส่งงาน (Board/ชม.) - ใช้ในการคำนวณแยก Inner/Outer
+                         </label>
+                        <input type="number" id="materialHandlerRateActual" value="1000" min="1"
+                            class="mt-1 block w-full px-3 py-1 border border-pink-300 rounded-lg text-sm">
+                    </div>
+                </div>
+            </div>
+
+        </div>
+
+        <div class="flex flex-col md:flex-row gap-4 mb-8">
+            <button onclick="calculateStaff()"
+                    class="w-full md:w-1/2 py-3 bg-blue-600 text-white font-semibold text-lg rounded-lg shadow-lg hover:bg-blue-700 transition duration-300 transform hover:scale-[1.01]">
+                คำนวณจำนวนเครื่องจักรและพนักงาน
+            </button>
+            <button onclick="exportToCSV()" id="exportButton" disabled
+                    class="w-full md:w-1/2 py-3 bg-green-500 text-white font-semibold text-lg rounded-lg shadow-lg hover:bg-green-600 transition duration-300 transform hover:scale-[1.01] disabled:opacity-50 disabled:cursor-not-allowed">
+                ส่งออกเป็น CSV/Excel
+            </button>
+        </div>
+
+        <!-- Total Machine Result -->
+        <div id="machineSummary" class="p-6 bg-green-100 rounded-lg border-2 border-green-500 text-center mb-10 hidden">
+            <p class="text-lg font-medium text-green-800">
+                รวมจำนวนเครื่องจักรที่จำเป็นในการผลิต:
+            </p>
+            <p class="text-5xl font-extrabold text-green-600 mt-2" id="totalRequiredMachines">0</p>
+            <p class="text-sm text-gray-500 mt-2">
+                (มาจาก Inner <span id="innerRequiredMachines">0</span> เครื่อง + Outer <span id="outerRequiredMachines">0</span> เครื่อง)
+            </p>
+        </div>
+
+
+        <!-- Calculation Display Section -->
+        <div id="results" class="space-y-10">
+            <!-- Inner Staff Results -->
+            <div id="innerResults" class="bg-indigo-50 border-l-4 border-indigo-500 p-6 rounded-lg hidden">
+                <h2 class="text-2xl font-bold text-indigo-800 mb-4 flex items-center">
+                    <svg class="w-6 h-6 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path></svg>
+                    พนักงาน Inner (รวม Headcount: <span id="totalInnerStaff" class="ml-1 text-3xl">0</span> คน)
+                </h2>
+                <div class="staff-grid p-2 rounded-lg header-bg mb-4">
+                    <div class="text-center">Shift A</div>
+                    <div class="text-center">Shift B</div>
+                    <div class="text-center font-extrabold">Total (A+B)</div>
+                </div>
+                
+                <!-- Inner Verify Row -->
+                <div class="mb-4">
+                    <p class="text-sm font-semibold text-gray-700 mb-1">1. Verify (<span id="innerVerifyRateDisplay">120</span>/ชม.)</p>
+                    <div class="staff-grid text-gray-700">
+                        <div class="p-3 bg-white rounded-lg border text-center font-bold text-indigo-600" id="innerVerifyA"></div>
+                        <div class="p-3 bg-white rounded-lg border text-center font-bold text-indigo-600" id="innerVerifyB"></div>
+                        <div class="p-3 bg-white rounded-lg border text-center font-extrabold text-2xl text-indigo-800" id="innerVerifyTotal"></div>
+                    </div>
+                     <p class="text-xs text-gray-400 mt-1 text-right">FTE (Raw): <span id="innerVerifyRaw"></span></p>
+                </div>
+                
+                <!-- Inner Cutoff Row -->
+                <div class="mb-4">
+                    <p class="text-sm font-semibold text-gray-700 mb-1">2. Cutoff Defect (<span id="innerCutoffRateDisplay">350</span>/ชม.)</p>
+                    <div class="staff-grid text-gray-700">
+                        <div class="p-3 bg-white rounded-lg border text-center font-bold text-indigo-600" id="innerCutoffA"></div>
+                        <div class="p-3 bg-white rounded-lg border text-center font-bold text-indigo-600" id="innerCutoffB"></div>
+                        <div class="p-3 bg-white rounded-lg border text-center font-extrabold text-2xl text-indigo-800" id="innerCutoffTotal"></div>
+                    </div>
+                    <p class="text-xs text-gray-400 mt-1 text-right">FTE (Raw): <span id="innerCutoffRaw"></span></p>
+                </div>
+
+                <!-- Inner Support Row -->
+                <div class="mb-4">
+                    <p class="text-sm font-semibold text-gray-700 mb-1">3. Support (1 คนต่อ 4 เครื่องจักร) - สำหรับ Inner <span id="innerRequiredMachinesDisplay">0</span> เครื่อง</p>
+                    <div class="staff-grid text-gray-700">
+                        <div class="p-3 bg-white rounded-lg border text-center font-bold text-indigo-600" id="innerSupportA"></div>
+                        <div class="p-3 bg-white rounded-lg border text-center font-bold text-indigo-600" id="innerSupportB"></div>
+                        <div class="p-3 bg-white rounded-lg border text-center font-extrabold text-2xl text-indigo-800" id="innerSupportTotal"></div>
+                    </div>
+                    <p class="text-xs text-gray-400 mt-1 text-right">FTE (Raw): <span id="innerSupportRaw"></span></p>
+                </div>
+                
+                <!-- Inner Handler Row -->
+                 <div class="mb-4">
+                    <p class="text-sm font-semibold text-gray-700 mb-1">4. รับส่งงาน Handler (ตามยอด Inner) (<span id="materialHandlerRateActual_Inner">1000</span>/ชม.)</p>
+                    <div class="staff-grid text-gray-700">
+                        <div class="p-3 bg-white rounded-lg border text-center font-bold text-indigo-600" id="innerHandlerA"></div>
+                        <div class="p-3 bg-white rounded-lg border text-center font-bold text-indigo-600" id="innerHandlerB"></div>
+                        <div class="p-3 bg-white rounded-lg border text-center font-extrabold text-2xl text-indigo-800" id="innerHandlerTotal"></div>
+                    </div>
+                    <p class="text-xs text-gray-400 mt-1 text-right">FTE (Raw): <span id="innerHandlerRaw"></span></p>
+                </div>
+                
+                <!-- Inner Output Breakdown -->
+                <div class="mt-6 p-3 bg-indigo-100 rounded-lg border-t-2 border-indigo-500">
+                    <p class="text-lg font-extrabold text-indigo-800 mb-2">
+                        ยอดผลิตที่ทำได้จริง (Boards/วัน):
+                    </p>
+                    <div class="pl-4 text-sm space-y-1">
+                        <div class="flex justify-between text-indigo-700">
+                            <span>- จากพนักงาน Verify:</span>
+                            <span id="innerVerifyOutput" class="font-bold text-lg">0</span>
+                        </div>
+                         <div class="flex justify-between text-indigo-700">
+                            <span>- จากพนักงาน Cutoff Defect:</span>
+                            <span id="innerCutoffOutput" class="font-bold text-lg">0</span>
+                        </div>
+                        <div class="flex justify-between text-indigo-700">
+                            <span>- จากพนักงานรับส่งงาน:</span>
+                            <span id="innerHandlerOutput" class="font-bold text-lg">0</span>
+                        </div>
+                    </div>
+                    <p class="text-xs text-gray-500 text-right mt-1"> boards/วัน (จากกำลังคน)</p>
+                </div>
+                
+            </div>
+
+            <!-- Outer Staff Results -->
+            <div id="outerResults" class="bg-yellow-50 border-l-4 border-yellow-500 p-6 rounded-lg hidden">
+                <h2 class="text-2xl font-bold text-yellow-800 mb-4 flex items-center">
+                    <svg class="w-6 h-6 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20v-2c0-.656-.126-1.283-.356-1.857M20 16v1a2 2 0 01-2 2h-2m-4-2v-2m0 0a2 2 0 00-2-2H8m4-2a2 2 0 00-2-2h-2m7-2V7a4 4 0 00-7-2.857M5 10v2a4 4 0 002 3.465M5 10a2 2 0 012-2h2.5"></path></svg>
+                    พนักงาน Outer (รวม Headcount: <span id="totalOuterStaff" class="ml-1 text-3xl">0</span> คน)
+                </h2>
+                 <div class="staff-grid p-2 rounded-lg header-bg mb-4">
+                    <div class="text-center">Shift A</div>
+                    <div class="text-center">Shift B</div>
+                    <div class="text-center font-extrabold">Total (A+B)</div>
+                </div>
+
+                <!-- Outer Verify Row -->
+                <div class="mb-4">
+                    <p class="text-sm font-semibold text-gray-700 mb-1">1. Verify (<span id="outerVerifyRateDisplay">50</span>/ชม.)</p>
+                    <div class="staff-grid text-gray-700">
+                        <div class="p-3 bg-white rounded-lg border text-center font-bold text-yellow-600" id="outerVerifyA"></div>
+                        <div class="p-3 bg-white rounded-lg border text-center font-bold text-yellow-600" id="outerVerifyB"></div>
+                        <div class="p-3 bg-white rounded-lg border text-center font-extrabold text-2xl text-yellow-800" id="outerVerifyTotal"></div>
+                    </div>
+                     <p class="text-xs text-gray-400 mt-1 text-right">FTE (Raw): <span id="outerVerifyRaw"></span></p>
+                </div>
+                
+                <!-- Outer Cutoff Row -->
+                <div class="mb-4">
+                    <p class="text-sm font-semibold text-gray-700 mb-1">2. Cutoff Defect (<span id="outerCutoffRateDisplay">250</span>/ชม.)</p>
+                    <div class="staff-grid text-gray-700">
+                        <div class="p-3 bg-white rounded-lg border text-center font-bold text-yellow-600" id="outerCutoffA"></div>
+                        <div class="p-3 bg-white rounded-lg border text-center font-bold text-yellow-600" id="outerCutoffB"></div>
+                        <div class="p-3 bg-white rounded-lg border text-center font-extrabold text-2xl text-yellow-800" id="outerCutoffTotal"></div>
+                    </div>
+                    <p class="text-xs text-gray-400 mt-1 text-right">FTE (Raw): <span id="outerCutoffRaw"></span></p>
+                </div>
+                
+                <!-- Support Row (Separated Outer Support) -->
+                 <div class="mb-4">
+                    <p class="text-sm font-semibold text-gray-700 mb-1">3. Support (1 คนต่อ 4 เครื่องจักร) - สำหรับ Outer <span id="outerRequiredMachinesDisplay">0</span> เครื่อง</p>
+                    <div class="staff-grid text-gray-700">
+                        <div class="p-3 bg-white rounded-lg border text-center font-bold text-yellow-600" id="outerSupportA"></div>
+                        <div class="p-3 bg-white rounded-lg border text-center font-bold text-yellow-600" id="outerSupportB"></div>
+                        <div class="p-3 bg-white rounded-lg border text-center font-extrabold text-2xl text-yellow-800" id="outerSupportTotal"></div>
+                    </div>
+                    <p class="text-xs text-gray-400 mt-1 text-right">FTE (Raw): <span id="outerSupportRaw"></span></p>
+                </div>
+                
+                <!-- Outer Handler Row -->
+                <div class="mb-4">
+                    <p class="text-sm font-semibold text-gray-700 mb-1">4. รับส่งงาน Handler (ตามยอด Outer) (<span id="materialHandlerRateActual_Outer">1000</span>/ชม.)</p>
+                    <div class="staff-grid text-gray-700">
+                        <div class="p-3 bg-white rounded-lg border text-center font-bold text-yellow-600" id="outerHandlerA"></div>
+                        <div class="p-3 bg-white rounded-lg border text-center font-bold text-yellow-600" id="outerHandlerB"></div>
+                        <div class="p-3 bg-white rounded-lg border text-center font-extrabold text-2xl text-yellow-800" id="outerHandlerTotal"></div>
+                    </div>
+                    <p class="text-xs text-gray-400 mt-1 text-right">FTE (Raw): <span id="outerHandlerRaw"></span></p>
+                </div>
+
+                <!-- Outer Output Breakdown -->
+                <div class="mt-6 p-3 bg-yellow-100 rounded-lg border-t-2 border-yellow-500">
+                    <p class="text-lg font-extrabold text-yellow-800 mb-2">
+                        ยอดผลิตที่ทำได้จริง (Boards/วัน):
+                    </p>
+                     <div class="pl-4 text-sm space-y-1">
+                        <div class="flex justify-between text-yellow-700">
+                            <span>- จากพนักงาน Verify:</span>
+                            <span id="outerVerifyOutput" class="font-bold text-lg">0</span>
+                        </div>
+                         <div class="flex justify-between text-yellow-700">
+                            <span>- จากพนักงาน Cutoff Defect:</span>
+                            <span id="outerCutoffOutput" class="font-bold text-lg">0</span>
+                        </div>
+                        <div class="flex justify-between text-yellow-700">
+                            <span>- จากพนักงานรับส่งงาน:</span>
+                            <span id="outerHandlerOutput" class="font-bold text-lg">0</span>
+                        </div>
+                    </div>
+                    <p class="text-xs text-gray-500 text-right mt-1"> boards/วัน (จากกำลังคน)</p>
+                </div>
+                
+            </div>
+            
+             <!-- MODIFIED: Grand Total and Error/Info Message -->
+            <div id="grandTotalContainer" class="p-6 bg-blue-100 rounded-lg border-2 border-blue-400 text-center hidden">
+                 <p class="text-lg font-medium text-blue-800 mb-4">
+                    สรุปจำนวนพนักงานที่ต้องจ้าง (Headcount ทั้ง A+B):
+                </p>
+                <!-- New Breakdown Structure - Separate all roles -->
+                <div class="text-left text-blue-700 mx-auto max-w-sm space-y-1 mb-4">
+                    <h4 class="font-bold text-xl mb-1 text-indigo-700">ยอดรวมพนักงาน Inner:</h4>
+                    <div class="pl-4">
+                        <div class="flex justify-between border-b border-indigo-300 pb-1">
+                            <span>พนักงาน Inner Verify:</span>
+                            <span id="finalInnerVerify" class="text-xl font-extrabold">0</span>
+                        </div>
+                        <div class="flex justify-between border-b border-indigo-300 pb-1">
+                            <span>พนักงาน Inner Cutoff Defect:</span>
+                            <span id="finalInnerCutoff" class="text-xl font-extrabold">0</span>
+                        </div>
+                        <div class="flex justify-between border-b border-indigo-300 pb-1">
+                            <span>พนักงาน Inner Support:</span>
+                            <span id="totalInnerSupportRoles" class="text-xl font-extrabold">0</span>
+                        </div>
+                         <div class="flex justify-between border-b border-indigo-300 pb-1">
+                            <span>พนักงาน Inner รับส่งงาน Handler:</span>
+                            <span id="totalInnerHandlerRoles" class="text-xl font-extrabold">0</span>
+                        </div>
+                        <div class="flex justify-between font-extrabold pt-2 mt-2 border-t-2 border-indigo-400">
+                            <span>ยอดรวมพนักงาน Inner (รวมทุกบทบาท):</span>
+                            <span id="totalInnerHeadcount" class="summary-total">0</span>
+                        </div>
+                    </div>
+                    
+                    <h4 class="font-bold text-xl mt-6 mb-1 text-yellow-700 border-t pt-4 border-gray-300">ยอดรวมพนักงาน Outer:</h4>
+                    <div class="pl-4">
+                        <div class="flex justify-between border-b border-yellow-300 pb-1">
+                            <span>พนักงาน Outer Verify:</span>
+                            <span id="finalOuterVerify" class="text-xl font-extrabold">0</span>
+                        </div>
+                        <div class="flex justify-between border-b border-yellow-300 pb-1">
+                            <span>พนักงาน Outer Cutoff Defect:</span>
+                            <span id="finalOuterCutoff" class="text-xl font-extrabold">0</span>
+                        </div>
+                        <div class="flex justify-between border-b border-yellow-300 pb-1">
+                            <span>พนักงาน Outer Support:</span>
+                            <span id="totalOuterSupportRoles" class="text-xl font-extrabold">0</span>
+                        </div>
+                        <div class="flex justify-between border-b border-yellow-300 pb-1">
+                            <span>พนักงาน Outer รับส่งงาน Handler:</span>
+                            <span id="totalOuterHandlerRoles" class="text-xl font-extrabold">0</span>
+                        </div>
+                        <div class="flex justify-between font-extrabold pt-2 mt-2 border-t-2 border-yellow-400">
+                            <span>ยอดรวมพนักงาน Outer (รวมทุกบทบาท):</span>
+                            <span id="totalOuterHeadcount" class="summary-total">0</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <p class="text-lg font-medium text-blue-800 mt-6 pt-4 border-t-2 border-blue-400">
+                    ยอดรวม Headcount ทั้งหมด (Inner + Outer):
+                </p>
+                <p class="text-5xl font-extrabold text-blue-600 mt-2" id="grandTotal">0</p>
+                <p class="text-sm text-gray-500 mt-4">
+                    *ผลลัพธ์คือจำนวนพนักงานรวมที่ต้องจ้างเพื่อครอบคลุมงานใน 2 กะ
+                </p>
+            </div>
+
+            <div id="errorMessage" class="hidden p-4 bg-red-100 border border-red-400 text-red-700 rounded-lg">
+                โปรดกรอก "ยอดการผลิต Inner" และ "ยอดการผลิต Outer" เป็นตัวเลขที่ถูกต้องและไม่เป็นลบ
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Constants
+        const DAILY_WORKING_HOURS = 21.5; // 21.5 ชั่วโมงต่อวัน (2 กะ)
+        const SUPPORT_MACHINE_RATIO = 4; // 1 Support FTE ดูแล 4 เครื่องจักร (ตามเงื่อนไขเดิม)
+        const VERIFY_STAFF_PER_MACHINE = 2; // NEW: 1 Machine requires 2 Verify Staff (1 per shift)
+        let calculationData = {}; // Global variable to store calculated data for CSV export
+
+        // Utility function for number formatting with comma separator
+        const formatter = new Intl.NumberFormat('th-TH', {
+            maximumFractionDigits: 0
+        });
+        
+        // Helper function to calculate staff needed per shift based on raw FTE.
+        // This function is still used for Cutoff and Handler, which are not tied to Machine M_Req
+        function calculateShiftStaff(rawFTE) {
+            if (rawFTE === 0) {
+                return { A: 0, B: 0, Total: 0 };
+            }
+            const staffPerShift = Math.ceil(rawFTE / 2);
+            return {
+                A: staffPerShift,
+                B: staffPerShift,
+                Total: staffPerShift * 2 // Total physical headcount (guaranteed even if staffPerShift is non-zero)
+            };
+        }
+
+        // NEW: Function to calculate Verify staff based on M_Req
+        function calculateVerifyStaffByMachine(machinesRequired, staffPerMachineTotal) {
+             if (machinesRequired === 0 || staffPerMachineTotal <= 0) {
+                return { A: 0, B: 0, Total: 0, Raw: 0 };
+            }
+
+            // Total headcount = Machines * 2 (1 person per shift per machine)
+            const totalStaff = machinesRequired * staffPerMachineTotal; 
+            const staffPerShift = machinesRequired * 1; // 1 person per machine per shift
+
+            return {
+                A: staffPerShift,
+                B: staffPerShift,
+                Total: totalStaff,
+                // The 'Raw FTE' display should ideally reflect the required total based on load, 
+                // but since the final headcount is FORCED by M_Req, we use totalStaff as raw reference for display
+                Raw: totalStaff 
+            };
+        }
+        
+        // Special function for Support staff calculation based on Total Machines (M_Req).
+        function calculateSupportStaffByMachine(machinesRequired, supportMachineRatio) {
+             if (machinesRequired === 0 || supportMachineRatio <= 0) {
+                return { A: 0, B: 0, Total: 0, Raw: 0 };
+            }
+            
+            const rawSupportFTE = machinesRequired / supportMachineRatio;
+            const supportPerShift = Math.ceil(rawSupportFTE / 2);
+
+            const totalSupportStaff = supportPerShift * 2; // Total headcount is even
+
+            return {
+                A: supportPerShift,
+                B: supportPerShift,
+                Total: totalSupportStaff,
+                Raw: rawSupportFTE // Raw is used for display/CSV
+            };
+        }
+
+        /**
+         * Calculates the required staff based on production order, incorporating machine capacity constraint.
+         */
+        function calculateStaff() {
+            // 1. Get Inputs (Production Order and Actual Rates)
+            const P_Inner = parseFloat(document.getElementById('innerProductionOrder').value) || 0;
+            const P_Outer = parseFloat(document.getElementById('outerProductionOrder').value) || 0;
+
+            // Get Actual Rates (new inputs)
+            const INNER_VERIFY_RATE = parseFloat(document.getElementById('innerVerifyRateActual').value) || 1;
+            const INNER_CUTOFF_RATE = parseFloat(document.getElementById('innerCutoffRateActual').value) || 1;
+            const OUTER_VERIFY_RATE = parseFloat(document.getElementById('outerVerifyRateActual').value) || 1;
+            const OUTER_CUTOFF_RATE = parseFloat(document.getElementById('outerCutoffRateActual').value) || 1;
+            
+            // Material Handler Rate
+            const HANDLER_RATE = parseFloat(document.getElementById('materialHandlerRateActual').value) || 1;
+
+            // Update display rates for Material Handler (NEW)
+            document.getElementById('materialHandlerRateActual_Inner').textContent = formatter.format(HANDLER_RATE);
+            document.getElementById('materialHandlerRateActual_Outer').textContent = formatter.format(HANDLER_RATE);
+
+
+            // Update display rates
+            document.getElementById('innerVerifyRateDisplay').textContent = formatter.format(INNER_VERIFY_RATE);
+            document.getElementById('innerCutoffRateDisplay').textContent = formatter.format(INNER_CUTOFF_RATE);
+            document.getElementById('outerVerifyRateDisplay').textContent = formatter.format(OUTER_VERIFY_RATE);
+            document.getElementById('outerCutoffRateDisplay').textContent = formatter.format(OUTER_CUTOFF_RATE);
+            
+            // Update Support descriptions with fixed ratio
+            document.getElementById('innerRequiredMachinesDisplay').textContent = '0';
+            document.getElementById('outerRequiredMachinesDisplay').textContent = '0';
+
+
+            // Hide previous results and error message
+            document.getElementById('innerResults').classList.add('hidden');
+            document.getElementById('outerResults').classList.add('hidden');
+            document.getElementById('grandTotalContainer').classList.add('hidden');
+            document.getElementById('machineSummary').classList.add('hidden');
+            document.getElementById('errorMessage').classList.add('hidden');
+            document.getElementById('exportButton').disabled = true;
+
+            // 2. Validate Inputs
+            if (P_Inner < 0 || P_Outer < 0 || INNER_VERIFY_RATE <= 0 || INNER_CUTOFF_RATE <= 0 || OUTER_VERIFY_RATE <= 0 || OUTER_CUTOFF_RATE <= 0 || HANDLER_RATE <= 0) {
+                document.getElementById('errorMessage').textContent = 'โปรดกรอกยอดการผลิตและอัตราการผลิตตามจริงเป็นตัวเลขที่ถูกต้อง (ต้องเป็นบวก)';
+                document.getElementById('errorMessage').classList.remove('hidden');
+                return;
+            }
+            if (P_Inner === 0 && P_Outer === 0) {
+                 document.getElementById('errorMessage').textContent = 'โปรดกรอกยอดการผลิตอย่างน้อยหนึ่งประเภท';
+                 document.getElementById('errorMessage').classList.remove('hidden');
+                 return;
+            }
+
+
+            // --- Calculation Logic ---
+            
+            // --- A. Calculate Required Machines (M_req) ---
+            
+            // Machine capacity is based ONLY on the Verify Rate
+            const INNER_MACHINE_CAPACITY = INNER_VERIFY_RATE * DAILY_WORKING_HOURS;
+            const OUTER_MACHINE_CAPACITY = OUTER_VERIFY_RATE * DAILY_WORKING_HOURS;
+
+
+            // A.1. Inner Required Machines (Based on Verify capacity)
+            const rawM_Inner_Req = P_Inner > 0 ? P_Inner / INNER_MACHINE_CAPACITY : 0;
+            const M_Inner_Req = Math.ceil(rawM_Inner_Req);
+
+            // A.2. Outer Required Machines (Based on Verify capacity)
+            const rawM_Outer_Req = P_Outer > 0 ? P_Outer / OUTER_MACHINE_CAPACITY : 0;
+            const M_Outer_Req = Math.ceil(rawM_Outer_Req);
+            
+            // A.3. Total Required Machines
+            const M_Total_Req = M_Inner_Req + M_Outer_Req;
+            
+            
+            // --- B. Calculate Support Staff (N_Support) based on M_Req (Total is even) ---
+            
+            // B.1. Inner Support Staff 
+            const innerSupport = calculateSupportStaffByMachine(M_Inner_Req, SUPPORT_MACHINE_RATIO);
+            const N_Inner_Support = innerSupport.Total;
+
+            // B.2. Outer Support Staff 
+            const outerSupport = calculateSupportStaffByMachine(M_Outer_Req, SUPPORT_MACHINE_RATIO);
+            const N_Outer_Support = outerSupport.Total;
+            
+            
+            // --- C. Calculate Inner Staff FTE and Shifts ---
+            
+            // C.1. Verify Staff (NEW: Calculated from M_Req)
+            const innerVerifyStaff = calculateVerifyStaffByMachine(M_Inner_Req, VERIFY_STAFF_PER_MACHINE);
+            // Since Verify staff is forced by machines, we use M_Req * 2 for Total, and M_Req * 1 for Raw FTE reference
+            const rawInnerVerify = M_Inner_Req * VERIFY_STAFF_PER_MACHINE; 
+            
+            // C.2. Cutoff Defect Staff (Calculated from Load)
+            const rawInnerCutoffFTE = P_Inner > 0 ? (P_Inner / INNER_CUTOFF_RATE) / DAILY_WORKING_HOURS : 0;
+            const innerCutoffStaff = calculateShiftStaff(rawInnerCutoffFTE);
+            
+            
+            // --- D. Calculate Outer Staff FTE and Shifts ---
+            
+            // D.1. Verify Staff (NEW: Calculated from M_Req)
+            const outerVerifyStaff = calculateVerifyStaffByMachine(M_Outer_Req, VERIFY_STAFF_PER_MACHINE);
+            const rawOuterVerify = M_Outer_Req * VERIFY_STAFF_PER_MACHINE; 
+
+            // D.2. Cutoff Defect Staff (Calculated from Load)
+            const rawOuterCutoffFTE = P_Outer > 0 ? (P_Outer / OUTER_CUTOFF_RATE) / DAILY_WORKING_HOURS : 0;
+            const outerCutoffStaff = calculateShiftStaff(rawOuterCutoffFTE);
+            
+            
+            // --- E. Calculate Material Handler Staff (Split by Inner/Outer Volume) ---
+            
+            // E.1. Inner Handler Staff (Based on P_Inner)
+            const rawInnerHandlerFTE = P_Inner > 0 ? (P_Inner / HANDLER_RATE) / DAILY_WORKING_HOURS : 0;
+            const innerHandlerStaff = calculateShiftStaff(rawInnerHandlerFTE);
+            const N_Inner_Handler = innerHandlerStaff.Total;
+            
+            // E.2. Outer Handler Staff (Based on P_Outer)
+            const rawOuterHandlerFTE = P_Outer > 0 ? (P_Outer / HANDLER_RATE) / DAILY_WORKING_HOURS : 0;
+            const outerHandlerStaff = calculateShiftStaff(rawOuterHandlerFTE);
+            const N_Outer_Handler = outerHandlerStaff.Total;
+            
+
+            // --- F. Grand Total Breakdown (Non-redundant headcount count) ---
+            const N_Inner_Verify = innerVerifyStaff.Total;
+            const N_Inner_Cutoff = innerCutoffStaff.Total;
+            const N_Outer_Verify = outerVerifyStaff.Total;
+            const N_Outer_Cutoff = outerCutoffStaff.Total;
+            
+            // F.1. Total Inner Staff Headcount
+            const N_Inner_Headcount_Total = N_Inner_Verify + N_Inner_Cutoff + N_Inner_Support + N_Inner_Handler;
+
+            // F.2. Total Outer Staff Headcount
+            const N_Outer_Headcount_Total = N_Outer_Verify + N_Outer_Cutoff + N_Outer_Support + N_Outer_Handler;
+
+            // F.3. ยอดรวม Headcount ทั้งหมด (Inner + Outer)
+            const N_Grand_Total = N_Inner_Headcount_Total + N_Outer_Headcount_Total;
+
+
+            // --- G. Store Data for Export & Final Display Output Values ---
+            
+            // NOTE: Output Achieved is based on the VERIFY RATE and the resulting Headcount
+            const innerVerifyOutput = innerVerifyStaff.Total * (INNER_VERIFY_RATE / VERIFY_STAFF_PER_MACHINE) * DAILY_WORKING_HOURS; // Since staff is 2x machine, staff.Total is 2x M_Req. We must divide Rate by 2 to use M_Req's capacity
+            const innerCutoffOutput = innerCutoffStaff.Total * INNER_CUTOFF_RATE * DAILY_WORKING_HOURS;
+            const outerVerifyOutput = outerVerifyStaff.Total * (OUTER_VERIFY_RATE / VERIFY_STAFF_PER_MACHINE) * DAILY_WORKING_HOURS;
+            const outerCutoffOutput = outerCutoffStaff.Total * OUTER_CUTOFF_RATE * DAILY_WORKING_HOURS;
+            const innerHandlerOutput = innerHandlerStaff.Total * HANDLER_RATE * DAILY_WORKING_HOURS;
+            const outerHandlerOutput = outerHandlerStaff.Total * HANDLER_RATE * DAILY_WORKING_HOURS;
+            
+            calculationData = {
+                // Inputs
+                P_Inner, P_Outer,
+                INNER_VERIFY_RATE, INNER_CUTOFF_RATE, OUTER_VERIFY_RATE, OUTER_CUTOFF_RATE, HANDLER_RATE,
+                INNER_SUPPORT_RATIO: SUPPORT_MACHINE_RATIO, OUTER_SUPPORT_RATIO: SUPPORT_MACHINE_RATIO, 
+                // Machine Summary
+                M_Inner_Req, M_Outer_Req, M_Total_Req,
+                // Inner Staff Breakdown
+                innerVerifyStaff, innerCutoffStaff, innerSupport, innerHandlerStaff,
+                // Outer Staff Breakdown
+                outerVerifyStaff, outerCutoffStaff, outerSupport, outerHandlerStaff,
+                // Output Achieved (Ensure 0 if NaN, using ternary operator inside the object)
+                innerVerifyOutput: isNaN(innerVerifyOutput) ? 0 : innerVerifyOutput,
+                innerCutoffOutput: isNaN(innerCutoffOutput) ? 0 : innerCutoffOutput,
+                outerVerifyOutput: isNaN(outerVerifyOutput) ? 0 : outerVerifyOutput,
+                outerCutoffOutput: isNaN(outerCutoffOutput) ? 0 : outerCutoffOutput,
+                innerHandlerOutput: isNaN(innerHandlerOutput) ? 0 : innerHandlerOutput,
+                outerHandlerOutput: isNaN(outerHandlerOutput) ? 0 : outerHandlerOutput,
+                // Final Headcounts
+                N_Inner_Verify, N_Inner_Cutoff, N_Inner_Support, N_Inner_Handler, N_Outer_Verify, N_Outer_Cutoff, N_Outer_Support, N_Outer_Handler,
+                N_Inner_Headcount_Total, N_Outer_Headcount_Total, N_Grand_Total
+            };
+            
+
+            // --- 3. Display Results ---
+            
+            // Machine Summary Display
+            document.getElementById('totalRequiredMachines').textContent = M_Total_Req;
+            document.getElementById('innerRequiredMachines').textContent = M_Inner_Req;
+            document.getElementById('outerRequiredMachines').textContent = M_Outer_Req;
+            document.getElementById('machineSummary').classList.remove('hidden');
+
+            // Inner Display
+            document.getElementById('innerVerifyA').textContent = `${innerVerifyStaff.A} คน`;
+            document.getElementById('innerVerifyB').textContent = `${innerVerifyStaff.B} คน`;
+            document.getElementById('innerVerifyTotal').textContent = innerVerifyStaff.Total;
+            document.getElementById('innerVerifyRaw').textContent = innerVerifyStaff.Raw.toFixed(2); // Updated to show forced headcount as raw
+
+            document.getElementById('innerCutoffA').textContent = `${innerCutoffStaff.A} คน`;
+            document.getElementById('innerCutoffB').textContent = `${innerCutoffStaff.B} คน`;
+            document.getElementById('innerCutoffTotal').textContent = innerCutoffStaff.Total;
+            document.getElementById('innerCutoffRaw').textContent = rawInnerCutoffFTE.toFixed(2);
+            
+            // Inner Support (Separated)
+            document.getElementById('innerSupportA').textContent = `${innerSupport.A} คน`;
+            document.getElementById('innerSupportB').textContent = `${innerSupport.B} คน`;
+            document.getElementById('innerSupportTotal').textContent = N_Inner_Support; 
+            document.getElementById('innerSupportRaw').textContent = innerSupport.Raw.toFixed(2);
+            document.getElementById('innerRequiredMachinesDisplay').textContent = M_Inner_Req; // Display Inner machines used
+
+            // Inner Handler (NEW)
+            document.getElementById('innerHandlerA').textContent = `${innerHandlerStaff.A} คน`;
+            document.getElementById('innerHandlerB').textContent = `${innerHandlerStaff.B} คน`;
+            document.getElementById('innerHandlerTotal').textContent = N_Inner_Handler;
+            document.getElementById('innerHandlerRaw').textContent = rawInnerHandlerFTE.toFixed(2);
+            
+            document.getElementById('totalInnerStaff').textContent = N_Inner_Headcount_Total;
+
+            // Inner Output Display
+            document.getElementById('innerVerifyOutput').textContent = formatter.format(innerVerifyOutput);
+            document.getElementById('innerCutoffOutput').textContent = formatter.format(innerCutoffOutput);
+            document.getElementById('innerHandlerOutput').textContent = formatter.format(innerHandlerOutput); // NEW
+            
+            document.getElementById('innerResults').classList.remove('hidden');
+
+            // Outer Display
+            document.getElementById('outerVerifyA').textContent = `${outerVerifyStaff.A} คน`;
+            document.getElementById('outerVerifyB').textContent = `${outerVerifyStaff.B} คน`;
+            document.getElementById('outerVerifyTotal').textContent = outerVerifyStaff.Total;
+            document.getElementById('outerVerifyRaw').textContent = outerVerifyStaff.Raw.toFixed(2); // Updated to show forced headcount as raw
+
+            document.getElementById('outerCutoffA').textContent = `${outerCutoffStaff.A} คน`;
+            document.getElementById('outerCutoffB').textContent = `${outerCutoffStaff.B} คน`;
+            document.getElementById('outerCutoffTotal').textContent = outerCutoffStaff.Total;
+            document.getElementById('outerCutoffRaw').textContent = rawOuterCutoffFTE.toFixed(2);
+            
+            // Outer Support (Separated)
+            document.getElementById('outerSupportA').textContent = `${outerSupport.A} คน`;
+            document.getElementById('outerSupportB').textContent = `${outerSupport.B} คน`;
+            document.getElementById('outerSupportTotal').textContent = N_Outer_Support; 
+            document.getElementById('outerSupportRaw').textContent = outerSupport.Raw.toFixed(2);
+            document.getElementById('outerRequiredMachinesDisplay').textContent = M_Outer_Req; // Display Outer machines used
+            
+            // Outer Handler (NEW)
+            document.getElementById('outerHandlerA').textContent = `${outerHandlerStaff.A} คน`;
+            document.getElementById('outerHandlerB').textContent = `${outerHandlerStaff.B} คน`;
+            document.getElementById('outerHandlerTotal').textContent = N_Outer_Handler;
+            document.getElementById('outerHandlerRaw').textContent = rawOuterHandlerFTE.toFixed(2);
+
+
+            document.getElementById('totalOuterStaff').textContent = N_Outer_Headcount_Total;
+            
+            // Outer Output Display
+            document.getElementById('outerVerifyOutput').textContent = formatter.format(outerVerifyOutput);
+            document.getElementById('outerCutoffOutput').textContent = formatter.format(outerCutoffOutput);
+            document.getElementById('outerHandlerOutput').textContent = formatter.format(outerHandlerOutput); // NEW
+            
+            document.getElementById('outerResults').classList.remove('hidden');
+            
+            // Grand Total Display (Breakdown)
+            // Display Individual Roles
+            document.getElementById('finalInnerVerify').textContent = N_Inner_Verify;
+            document.getElementById('finalInnerCutoff').textContent = N_Inner_Cutoff;
+            document.getElementById('totalInnerSupportRoles').textContent = N_Inner_Support; 
+            document.getElementById('totalInnerHandlerRoles').textContent = N_Inner_Handler; // NEW
+            document.getElementById('finalOuterVerify').textContent = N_Outer_Verify;
+            document.getElementById('finalOuterCutoff').textContent = N_Outer_Cutoff;
+            document.getElementById('totalOuterSupportRoles').textContent = N_Outer_Support;
+            document.getElementById('totalOuterHandlerRoles').textContent = N_Outer_Handler; // NEW
+            
+            // Display Sub Totals
+            document.getElementById('totalInnerHeadcount').textContent = N_Inner_Headcount_Total;
+            document.getElementById('totalOuterHeadcount').textContent = N_Outer_Headcount_Total;
+
+            // Display Grand Total
+            document.getElementById('grandTotal').textContent = N_Grand_Total;
+            document.getElementById('grandTotalContainer').classList.remove('hidden');
+
+            // Enable Export Button after successful calculation
+            document.getElementById('exportButton').disabled = false;
+        }
+
+
+        // --- CSV Export Function ---
+        function exportToCSV() {
+            if (Object.keys(calculationData).length === 0) {
+                console.error('Calculation data is empty. Cannot export.');
+                return;
+            }
+
+            const data = calculationData;
+            
+            // Helper to clean number formatting for CSV
+            const formatNum = (num, isFTE = false) => {
+                if (isFTE) return num.toFixed(2);
+                return Math.round(num); 
+            };
+            
+            // Use a specific helper function to ensure string is safely quoted for CSV
+            const escapeCSV = (value) => {
+                if (typeof value === 'number') {
+                    if (value % 1 !== 0) { 
+                        return value.toFixed(2);
+                    }
+                    return value;
+                }
+                let str = String(value);
+                if (str.includes(',') || str.includes('\n') || str.includes('"')) {
+                    str = str.replace(/"/g, '""');
+                    return `"${str}"`;
+                }
+                return str;
+            };
+
+
+            let csvData = '';
+            
+            // Add BOM (\ufeff) to force Excel/UTF-8 compatibility, fixing the "foreign language" issue.
+            csvData += '\ufeff'; 
+
+            // --- Section 1: Inner Input and Machine Summary (Combined Header) ---
+            csvData += "สรุปข้อมูลพนักงาน Inner\n";
+            csvData += "รายละเอียด,ยอดสั่งผลิต/อัตรา (Board/ชม.),ชั่วโมงทำงานรวม,อัตราส่วน Support\n";
+            csvData += `${escapeCSV('ยอดการผลิต Inner (Boards/วัน)')},${escapeCSV(data.P_Inner)},${escapeCSV(DAILY_WORKING_HOURS)},\n`;
+            csvData += `${escapeCSV('อัตรา Inner Verify (Board/ชม.)')},${escapeCSV(data.INNER_VERIFY_RATE)},,1 ต่อ ${SUPPORT_MACHINE_RATIO} เครื่องจักร\n`;
+            csvData += `${escapeCSV('อัตรา Inner Cutoff (Board/ชม.)')},${escapeCSV(data.INNER_CUTOFF_RATE)},,\n`;
+            csvData += `${escapeCSV('อัตรา Inner Handler (Board/ชม.)')},${escapeCSV(data.HANDLER_RATE)},,\n`; // Handler Rate
+            csvData += "\n";
+            
+            csvData += "สรุปเครื่องจักรที่ต้องการ (Based on Verify Rate)\n";
+            csvData += "ประเภท,จำนวนเครื่องจักรที่ต้องการ\n";
+            csvData += `เครื่องจักร Inner Req.,${data.M_Inner_Req}\n`;
+            csvData += "\n";
+
+
+            // --- Section 2: Staff Breakdown (Inner) ---
+            csvData += "สรุปพนักงาน Inner\n";
+            csvData += "บทบาท,FTE (ดิบ),Shift A (คน),Shift B (คน),Total (Headcount),ยอดผลิตที่ทำได้จริง (Boards/วัน)\n";
+            csvData += `Inner Verify,${escapeCSV(data.innerVerifyStaff.Raw)},${data.innerVerifyStaff.A},${data.innerVerifyStaff.B},${data.innerVerifyStaff.Total},${formatNum(data.innerVerifyOutput)}\n`;
+            csvData += `Inner Cutoff Defect,${escapeCSV(data.innerCutoffStaff.Raw)},${data.innerCutoffStaff.A},${data.innerCutoffStaff.B},${data.innerCutoffStaff.Total},${formatNum(data.innerCutoffOutput)}\n`;
+            csvData += `Inner Support (1 คนต่อ 4 เครื่องจักร),${escapeCSV(data.innerSupport.Raw)},${data.innerSupport.A},${data.innerSupport.B},${data.innerSupport.Total},\n`;
+            csvData += `Inner Handler,${escapeCSV(data.innerHandlerStaff.Raw)},${data.innerHandlerStaff.A},${data.innerHandlerStaff.B},${data.innerHandlerStaff.Total},${formatNum(data.innerHandlerOutput)}\n`; // Handler Breakdown
+            csvData += `ยอดรวม Inner (Verify+Cutoff Defect+Support+Handler),,,,${data.N_Inner_Headcount_Total}\n`; // Total is in the 5th column
+            csvData += "\n";
+
+            // --- Section 3: Outer Input and Machine Summary (Combined Header) ---
+            csvData += "สรุปข้อมูลพนักงาน Outer\n";
+            csvData += "รายละเอียด,ยอดสั่งผลิต/อัตรา (Board/ชม.),ชั่วโมงทำงานรวม,อัตราส่วน Support\n";
+            csvData += `${escapeCSV('ยอดการผลิต Outer (Boards/วัน)')},${escapeCSV(data.P_Outer)},${escapeCSV(DAILY_WORKING_HOURS)},\n`;
+            csvData += `${escapeCSV('อัตรา Outer Verify (Board/ชม.)')},${escapeCSV(data.OUTER_VERIFY_RATE)},,1 ต่อ ${SUPPORT_MACHINE_RATIO} เครื่องจักร\n`;
+            csvData += `${escapeCSV('อัตรา Outer Cutoff (Board/ชม.)')},${escapeCSV(data.OUTER_CUTOFF_RATE)},,\n`;
+            csvData += `${escapeCSV('อัตรา Outer Handler (Board/ชม.)')},${escapeCSV(data.HANDLER_RATE)},,\n`; // Handler Rate
+            csvData += "\n";
+            
+            csvData += "สรุปเครื่องจักรที่ต้องการ (Based on Verify Rate)\n";
+            csvData += "ประเภท,จำนวนเครื่องจักรที่ต้องการ\n";
+            csvData += `เครื่องจักร Outer Req.,${data.M_Outer_Req}\n`;
+            csvData += "\n";
+
+            // --- Section 4: Staff Breakdown (Outer) ---
+            csvData += "สรุปพนักงาน Outer\n";
+            csvData += "บทบาท,FTE (ดิบ),Shift A (คน),Shift B (คน),Total (Headcount),ยอดผลิตที่ทำได้จริง (Boards/วัน)\n";
+            csvData += `Outer Verify,${escapeCSV(data.outerVerifyStaff.Raw)},${data.outerVerifyStaff.A},${data.outerVerifyStaff.B},${data.outerVerifyStaff.Total},${formatNum(data.outerVerifyOutput)}\n`;
+            csvData += `Outer Cutoff Defect,${escapeCSV(data.outerCutoffStaff.Raw)},${data.outerCutoffStaff.A},${data.outerCutoffStaff.B},${data.outerCutoffStaff.Total},${formatNum(data.outerCutoffOutput)}\n`;
+            csvData += `Outer Support (1 คนต่อ 4 เครื่องจักร),${escapeCSV(data.outerSupport.Raw)},${data.outerSupport.A},${data.outerSupport.B},${data.outerSupport.Total},\n`;
+            csvData += `Outer Handler,${escapeCSV(data.outerHandlerStaff.Raw)},${data.outerHandlerStaff.A},${data.outerHandlerStaff.B},${data.outerHandlerStaff.Total},${formatNum(data.outerHandlerOutput)}\n`; // Handler Breakdown
+            csvData += `ยอดรวม Outer (Verify+Cutoff Defect+Support+Handler),,,,${data.N_Outer_Headcount_Total}\n`; // Total is in the 5th column
+            csvData += "\n";
+            
+            // --- Section 5: Grand Total ---
+            csvData += "ยอดรวม Headcount ทั้งหมด\n";
+            csvData += "รายละเอียด,จำนวน\n";
+            csvData += `ยอดรวมพนักงานทั้งหมด (Headcount ทั้ง A+B),${data.N_Grand_Total}\n`;
+            csvData += `รวมเครื่องจักรที่ต้องใช้ทั้งหมด,${data.M_Total_Req}\n`;
+
+
+            // Create a Blob and link to trigger download
+            const blob = new Blob([csvData], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement('a');
+            
+            // Check for Blob support
+            if (link.download !== undefined) { 
+                const url = URL.createObjectURL(blob);
+                link.setAttribute('href', url);
+                link.setAttribute('download', 'Staff_Calculation_' + new Date().toISOString().slice(0, 10) + '.csv');
+                link.style.visibility = 'hidden';
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+            } else {
+                console.error('Browser does not support automatic Blob download.');
+            }
+        }
+        
+        // Run calculation on load with default values
+        window.onload = calculateStaff;
+    </script>
+</body>
+</html>
